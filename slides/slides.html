@@ -117,40 +117,76 @@ def stomp[T](s:Stompable[T]) = s.stomp()
         </section>
 
         <section data-transition="slide">
-          <p>Mario has a side kick called Yoshi who can eat stompables</p>
-          <img class="stretch" data-src="images/yoshi.jpg"/>
+          <p>Mario has a side kick called Luigi who made a vacuum to collect stompables</p>
+          <img class="stretch" data-src="images/Luigi_Mansion_dark.jpg"/>
           <pre class="fragment" ><code class="scala" data-trim>
-class Yoshi {
-
-  def eat[T](s:Stompable[T]) = stomp(s)
-
+class Vacuum {
+  def collect[T](s:Stompable[T]) = stomp(s)
 }
           </code></pre>
           <pre class="fragment" ><code class="scala" data-trim>
-val yoshi = new Yoshi()
-
+val vacuum = new Vacuum()
 val goomba = new Goomba()
-
-yoshi.eat(goomba)
+vacuum.collect(goomba)
           </code></pre>
 
         </section>
 
         <section data-transition="slide-in zoom-out">
-          <h2>What happens when Yoshi misses?</h2>
+          <h2>What happens when the Goomba escapes the suction?</h2>
           <pre class="fragment" ><code class="scala" data-trim>
-val yoshi = new Yoshi()
+val vacuum = new Vacuum()
 
-yoshi.eat(null)
+vacuum.collect(null)
           </code></pre>
         </section>
 
-        <section data-transition="zoom-in">
-          <img data-src="images/funny-squirrel.jpg">
+        <section data-transition="zoom-in" data-background="images/funny-squirrel.jpg" data-background-size="900px">
         </section>
 
-        <section transition="">
-          <p>Solution: Give Yoshi a Stomach</p>
+        <section data-transition="slide">
+          <h2>Solution: Check For Nulls</h2>
+          <pre><code class="scala" data-trim >
+class Vacuum {
+  def collect[T](s:Stompable[T]) = if (s == null) null else stomp(s)
+}
+          </code></pre>
+          <p class="fragment">But then the calling class runs the risk of NullPointer exceptions.</p>
+        </section>
+
+        <section data-transition="zoom-in">
+          <p>There must be a better way</p>
+          <img class="stretch" data-src="images/better_way.jpg"/>
+        </section>
+
+        <section data-transition="slide-in zoom-out">
+          <h2>Solution: Put the Goomba in a Cage</h2>
+          <pre class="fragment" ><code class="scala" data-trim>
+sealed trait Cage[+T]
+case class FullCage[+T](value: T) extends Cage[T]
+case object EmptyCage extends Cage[Nothing]
+
+object Cage {
+  def apply[T](x: T):Cage[T] = if (x == null) EmptyCage else FullCage(x)
+}
+
+class Vacuum {
+
+  def collect[T](c:Cage[Stompable[T]]):Cage[T] = c match {
+    case EmptyCage => EmptyCage
+    case FullCage(s) => FullCage(stomp(s))
+  }
+}
+          </code></pre>
+
+          <pre class="fragment" ><code class="scala" data-trim>
+val vac = new Vacuum()
+vac.collect(Cage(Goomba()))
+vac.collect(Cage(null))
+          </code></pre>
+        </section>
+
+        <section data-transition="zoom-in" data-background="images/no_boom_boom.jpg">
         </section>
 
 </div>
