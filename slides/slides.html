@@ -1,0 +1,156 @@
+<div class="slides" id="slides">
+        <section data-transition="slide">
+        <h1>Functors, Apply, Applicaive and Monads</h1>
+        </section>
+
+        <section data-transition="slide">
+          <h2>That's just dull</h2>
+        </section>
+
+        <section data-transition="slide">
+          <h2>So let's try instead ...</h2>
+        </section>
+
+        <section data-transition="slide">
+          <h1 style="text-align: right;"><b>Rescuing Princess <font color="#f08">Purity</font> From Castle Side Effect</b></h1>
+            <img data-src="images/start_screen.jpg"/>
+        </section>
+
+        <section data-transition="slide">
+          <h1>Questions to keep in mind<h1>
+        </section>
+
+        <section data-transition="slide">
+          <h2>Why should you care?<h2>
+          <p class="fragment">How do Functors, Apply, Applicative and Monad help you achive early and continous delivery of software?<p>
+        </section>
+
+        <section data-transition="slide">
+          <h2>Think about this...<h2>
+          <p class="fragment">If a mushroom pizza costs $16 and you buy two how much do you spend?<p>
+          <p class="fragment">A mario kart costs $20 per day to rent. How much does it cost to rent for two days?<p>
+        </section>
+
+        <section data-transition="slide">
+          <h2>Don't just think about the maths<h2>
+          <p class="fragment">Think about the process you are going through before you get to the maths.<p>
+          <p class="fragment">What information are you keeping and what information are you dropping?<p>
+        </section>
+
+        <section data-transition="slide">
+          <h2>Abstraction<h2>
+          <p class="fragment">In both cases we use abstraction to solve the problems.<p>
+          <p class="fragment">It doesn't matter if its pizza or mario carts or anything else we take the cost and muliply it by some factor.<p>
+        </section>
+
+        <section data-transition="slide">
+          <h2>The other thing to think about<h2>
+            <ul>
+          <li class="fragment">Is a mile a long way?</li>
+          <li class="fragment">Is a year a large amount of time?</li>
+            <ul>
+        </section>
+
+        <section data-transition="slide">
+          <h2>It all depends on context<h2>
+            <ul>
+          <li class="fragment">A mile is along way if you are an Ant but not if you are flying in an aeroplane.</li>
+          <li class="fragment">A year is a long time for a Mayfly that lives for only 5 minutes. But in geological time it's insignificant.</li>
+            <ul>
+        </section>
+
+        <section>
+          <h1>Training Level</h1>
+        </section>
+
+        <section data-transition="slide">
+          <h2>What is funcitonal programming?</h2>
+          <blockquote class="fragment">Construct our programs using only pure functions.</blockquote>
+          <blockquote class="fragment">Pure functions have no side effects.</blockquote>
+        </section>
+
+        <section data-transition="slide">
+          <h1>Why is a funciton like a pipe?</h1>
+          <p class="fragment">Some thing goes into one end and something else comes out the other end</p>
+        </section>
+
+        <section data-transition="slide">
+          <p>Simple pipes simple can  be joined together to form complex systems?</p>
+          <img data-src="images/complex_pipes.jpg">
+        </section>
+
+        <section data-transition="slide">
+          <h2>What's so good about no side effects?</h2>
+          <p class="fragment">It makes it easier to reason about what's going on</p>
+        </section>
+
+        <section>
+          <p>It's important that functions like pipes don't leak</p>
+          <img class="fragment" data-src="images/leaking_pipes.jpg">
+        </section>
+
+        <section data-transition="slide">
+          <h1>World 1-1</h1>
+          <p>Functor Land</p>
+        </section>
+
+        <section data-transition="slide">
+          <h1>Goomba problem<h1>
+          <img data-src="images/Goomba.png">
+        </section>
+
+        <section data-transition="slide">
+          <h2>Defeating a Goomba</h2>
+          <p class="fragment" >Stomp it and it turns into a coin</p>
+          <pre class="fragment" ><code class="scala" data-trim>
+trait Stompable[T] {
+  def stomp():T
+}
+case class Coin()
+case class Goomba() extends Stompable[Coin] {
+  def stomp() = Coin()
+}
+
+def stomp[T](s:Stompable[T]) = s.stomp()
+          </code></pre>
+          <p class="fragment" >The function stomp is our pipe, that transforms from a Stompable to a Coin.</p>
+        </section>
+
+        <section data-transition="slide">
+          <p>Mario has a side kick called Yoshi who can eat stompables</p>
+          <img class="stretch" data-src="images/yoshi.jpg"/>
+          <pre class="fragment" ><code class="scala" data-trim>
+class Yoshi {
+
+  def eat[T](s:Stompable[T]) = stomp(s)
+
+}
+          </code></pre>
+          <pre class="fragment" ><code class="scala" data-trim>
+val yoshi = new Yoshi()
+
+val goomba = new Goomba()
+
+yoshi.eat(goomba)
+          </code></pre>
+
+        </section>
+
+        <section data-transition="slide-in zoom-out">
+          <h2>What happens when Yoshi misses?</h2>
+          <pre class="fragment" ><code class="scala" data-trim>
+val yoshi = new Yoshi()
+
+yoshi.eat(null)
+          </code></pre>
+        </section>
+
+        <section data-transition="zoom-in">
+          <img data-src="images/funny-squirrel.jpg">
+        </section>
+
+        <section transition="">
+          <p>Solution: Give Yoshi a Stomach</p>
+        </section>
+
+</div>
