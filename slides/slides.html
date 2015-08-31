@@ -17,42 +17,47 @@
         </section>
 
         <section data-transition="slide">
-          <h1>Questions to keep in mind<h1>
+          <h1>Questions to keep in mind</h1>
         </section>
 
         <section data-transition="slide">
-          <h2>Why should you care?<h2>
-          <p class="fragment">How do Functors, Apply, Applicative and Monad help you achive early and continous delivery of software?<p>
+          <h1>Why should you care?</h1>
+          <p class="fragment">How do Functors, Apply, Applicative and Monad help you achive early and continous delivery of software?</p>
         </section>
 
         <section data-transition="slide">
-          <h2>Think about this...<h2>
-          <p class="fragment">If a mushroom pizza costs $16 and you buy two how much do you spend?<p>
-          <p class="fragment">A mario kart costs $20 per day to rent. How much does it cost to rent for two days?<p>
+          <h2>Think about this...</h2>
+            <ul>
+          <li class="fragment">If a mushroom pizza costs $16 and you buy two how much do you spend?</li>
+          <li class="fragment">A mario kart costs $20 per day to rent. How much does it cost to rent for two days?</li>
+          </ul>
         </section>
 
         <section data-transition="slide">
-          <h2>Don't just think about the maths<h2>
-          <p class="fragment">Think about the process you are going through before you get to the maths.<p>
-          <p class="fragment">What information are you keeping and what information are you dropping?<p>
+          <h2>Don't just think about the maths</h2>
+          <p class="fragment">Think about the process you are going through before you get to the maths.</p>
+          <p class="fragment">What information are you keeping and what information are you dropping?</p>
+        </section>
+
+        <section data-transition="slide" data-background="images/kandinsky.comp-8.jpg" >
+          <h2>Abstraction</h2>
+          <p class="fragment">We use abstraction to solve the problems.</p>
+          <p class="fragment">It doesn't matter if its pizza, mario carts or anything else we take the cost and muliply it by some factor.</p>
         </section>
 
         <section data-transition="slide">
-          <h2>Abstraction<h2>
-          <p class="fragment">In both cases we use abstraction to solve the problems.<p>
-          <p class="fragment">It doesn't matter if its pizza or mario carts or anything else we take the cost and muliply it by some factor.<p>
-        </section>
-
-        <section data-transition="slide">
-          <h2>The other thing to think about<h2>
+          <h1>How about this?</h1>
             <ul>
           <li class="fragment">Is a mile a long way?</li>
           <li class="fragment">Is a year a large amount of time?</li>
             <ul>
         </section>
 
+        <section data-transition="slide" class="stretch" data-background="images/context-matters.jpg" >
+        </section>
+
         <section data-transition="slide">
-          <h2>It all depends on context<h2>
+          <h1>It all depends on context</h1>
             <ul>
           <li class="fragment">A mile is along way if you are an Ant but not if you are flying in an aeroplane.</li>
           <li class="fragment">A year is a long time for a Mayfly that lives for only 5 minutes. But in geological time it's insignificant.</li>
@@ -64,7 +69,7 @@
         </section>
 
         <section data-transition="slide">
-          <h2>What is funcitonal programming?</h2>
+          <h2>What is functional programming?</h2>
           <blockquote class="fragment">Construct our programs using only pure functions.</blockquote>
           <blockquote class="fragment">Pure functions have no side effects.</blockquote>
         </section>
@@ -95,29 +100,26 @@
         </section>
 
         <section data-transition="slide">
-          <h1>Goomba problem<h1>
+          <h1>Goomba problem</h1>
           <img data-src="images/Goomba.png">
         </section>
 
         <section data-transition="slide">
-          <h2>Defeating a Goomba</h2>
-          <p class="fragment" >Stomp it and it turns into a coin</p>
+          <h2>How to Defeat a Goomba</h2>
+          <p class="fragment">Stomp it and it turns into a coin</p>
           <pre class="fragment" ><code class="scala" data-trim>
-trait Stompable[T] {
-  def stomp():T
-}
 case class Coin()
-case class Goomba() extends Stompable[Coin] {
+case class Goomba() {
   def stomp() = Coin()
 }
 
-def stomp[T](s:Stompable[T]) = s.stomp()
+def stomp(g:Goomba) = g.stomp()
           </code></pre>
-          <p class="fragment" >The function stomp is our pipe, that transforms from a Stompable to a Coin.</p>
+          <p class="fragment" >The function stomp is our pipe, that transforms from a Goomba to a Coin.</p>
         </section>
 
         <section data-transition="slide">
-          <p>Mario has a side kick called Luigi who made a vacuum to collect stompables</p>
+          <h2>Luigi made a vacuum to collect Goombas</h2>
           <img class="stretch" data-src="images/Luigi_Mansion_dark.jpg"/>
           <pre class="fragment" ><code class="scala" data-trim>
 class Vacuum {
@@ -141,14 +143,14 @@ vacuum.collect(null)
           </code></pre>
         </section>
 
-        <section data-transition="zoom-in" data-background="images/funny-squirrel.jpg" data-background-size="900px">
+        <section data-transition="zoom-in" data-background="images/funny-squirrel.jpg" data-background-size="600px">
         </section>
 
         <section data-transition="slide">
           <h2>Solution: Check For Nulls</h2>
           <pre><code class="scala" data-trim >
 class Vacuum {
-  def collect[T](s:Stompable[T]) = if (s == null) null else stomp(s)
+  def collect(s:Goomba) = if (s == null) null else stomp(s)
 }
           </code></pre>
           <p class="fragment">But then the calling class runs the risk of NullPointer exceptions.</p>
@@ -163,7 +165,9 @@ class Vacuum {
           <h2>Solution: Put the Goomba in a Cage</h2>
           <pre class="fragment" ><code class="scala" data-trim>
 sealed trait Cage[+T]
+
 case class FullCage[+T](value: T) extends Cage[T]
+
 case object EmptyCage extends Cage[Nothing]
 
 object Cage {
@@ -172,7 +176,7 @@ object Cage {
 
 class Vacuum {
 
-  def collect[T](c:Cage[Stompable[T]]):Cage[T] = c match {
+  def collect(c:Cage[Goomba]):Cage[Coin] = c match {
     case EmptyCage => EmptyCage
     case FullCage(s) => FullCage(stomp(s))
   }
@@ -181,12 +185,47 @@ class Vacuum {
 
           <pre class="fragment" ><code class="scala" data-trim>
 val vac = new Vacuum()
+
 vac.collect(Cage(Goomba()))
+
 vac.collect(Cage(null))
           </code></pre>
         </section>
 
         <section data-transition="zoom-in" data-background="images/no_boom_boom.jpg">
         </section>
+
+        <section data-transition="slide">
+          <h1>Why limit ourself to just stomping what's in the cage?</h1>
+          <pre class="fragment" ><code class="scala" data-trim>
+class Vacuum {
+
+  def collect[A,B](c:Cage[A], f:A => B):Cage[B] = c match {
+
+    case EmptyCage => EmptyCage
+
+    case FullCage(s) => FullCage(f(s))
+
+  }
+}
+        </code></pre>
+        </section>
+
+        <section data-transition="slide">
+          <h1>Can we generalize the Vacuum?</h1>
+          <img class="stretch" data-src="images/generalization.png" >
+        </section>
+
+        <section data-transition="zoom-in">
+          <img class="stretch" data-src="images/get_the_funk_out.jpg"/>
+        </section>
+
+        <section data-transition="slide">
+          <h1>The Functor</h1>
+          <blockquote cite="http://bartoszmilewski.com/2015/01/20/functors/">A functor is a mapping between categories. Given two categories, C and D, a functor F maps objects in C to objects in D.</blockquote>
+          <p><a href="http://bartoszmilewski.com/2015/01/20/functors/">http://bartoszmilewski.com/2015/01/20/functors/</href></p>
+
+        </section>
+
 
 </div>
