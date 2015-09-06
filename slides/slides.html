@@ -686,4 +686,208 @@ Cage(Goomba()).map(stomp)
 
   <section data-transition="zoom-in" data-background-size="contain" data-background="images/world-1-1-flag.jpg" >
   </section>
+
+
+  <section data-transition="slide">
+    <h1>World 1-2</h1>
+    <p>Applicative</p>
+  </section>
+
+  <section data-transition="slide">
+    <h2>Piranha Plant</h2>
+    <p>TODO:Add image</p>
+    <pre class="fragment" ><code class="scala" data-trim>
+case class Coin()
+case class Goomba()
+case class Fireball()
+case class PiranhaPlant()
+def shoot(plant:PiranhaPlant, fireball:Fireball): Coin = Coin()
+    </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>The plant is generated from a unreliable method</h3>
+    <p>Wrap the plant in a Option and map over it?</p>
+<pre class="fragment" ><code class="scala" data-trim>
+Option(PiranhaPlant()).map(shoot _)
+    </code></pre>
+    <pre class="fragment" ><code class="scala" data-trim>
+      <console>:31: error: type mismatch;
+found   : (PiranhaPlant, Fireball) => Coin
+required: PiranhaPlant => ?
+            Option(PiranhaPlant()).map(shoot _)
+        </code></pre>
+  </section>
+
+  <section data-transition="slide" data-background-size="contain" data-background="images/curry.jpg" >
+    <h2 ><font color="#f08">Curring</font></h2>
+  </section>
+
+  <section data-transition="slide">
+    <h2>Curring is partial application</h2>
+    <p>Translating the evaluation of a function that takes multiple arguments
+       into evaluating a sequence of functions, each with a single argument
+    <pre class="fragment" ><code class="scala" data-trim>
+(shoot _).curried
+//res41: PiranhaPlant => (Fireball => Coin) = <function1>
+    </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Map the curried shoot function</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+Option(PiranhaPlant()) map {shoot _}.curried
+//Option[Fireball => Coin] = ...
+    </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>What if the fireball parameter generation is in a context?</h3>
+    <p class="fragment">Functor only support mapping functions over functor</p>
+    <pre class="fragment" ><code class="scala" data-trim>
+def map[A, B](fa: F[A])(f: A => B): F[B]
+    </code></pre>
+    <p class="fragment">We need to map function in a functor over a value in a functor</p>
+    <p>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Apply</h3>
+<pre class="fragment" ><code class="scala" data-trim>
+package scalaz
+trait Apply[F[_]] extends Functor[F] { self =>
+  ////
+  def ap[A,B](fa: => F[A])(f: => F[A => B]): F[B]
+  ...
+}
+</code></pre>
+
+<pre class="fragment" ><code class="scala" data-trim>
+package scalaz
+package syntax
+
+final class ApplyOps[F[_],A] private[syntax](val self: F[A])
+(implicit val F: Apply[F]) extends Ops[F[A]] {
+  final def <*>[B](f: F[A => B]): F[B] = F.ap(self)(f)
+...
+}
+
+trait ToApplyOps extends ToApplyOps0 with ToFunctorOps {
+  implicit def ToApplyOps[F[_],A](v: F[A])(implicit F0: Apply[F]) =
+    new ApplyOps[F,A](v)
+...
+}
+</code></pre>
+
+  </section>
+
+  <section data-transition="slide">
+    <h3>What would our vacuum look like?</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+implicit object CageApply extends Apply[Cage] with Functor[Cage] {
+  override def ap[A, B](fa: => Cage[A])(fab: => Cage[(A) => B]): Cage[B] =  fab match {
+    case FullCage(f) => fa match {
+      case FullCage(x) => FullCage(f(x))
+      case EmptyCage()    => EmptyCage[B]()
+    }
+    case EmptyCage()    => EmptyCage[B]()
+  }
+
+  override def map[A, B](fa: Cage[A])(f: (A) => B): Cage[B] = CageFunctor.map(fa)(f)
+}
+    </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>How would you use it?</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+val partialShoot = Cage(PiranhaPlant()) <*> Cage((shoot _).curried)
+val optCoin = Cage(Fireball()) <*> partialShoot
+//optCoin: Cage[Coin] = FullCage(Coin())
+    </code></pre>
+
+  </section>
+
+  <section data-transition="slide">
+    <h3>The laws</h3>
+    <pre class="stretch" ><code class="scala" data-trim>
+import org.scalacheck.Arbitrary
+import org.specs2.scalaz.Spec
+import scalaz.Equal
+import scalaz.scalacheck.ScalazProperties
+
+class CageApplySpec extends Spec {
+  
+  implicit val abrCage = Arbitrary[Cage[Int]] {
+    for {
+      ns <- Arbitrary.arbInt.arbitrary
+    } yield Cage(ns)
+  }
+
+  implicit val arbCageIntToInt = Arbitrary[Cage[Int => Int]] {
+    for{
+      multi <- Arbitrary.arbInt.arbitrary
+    } yield Cage((x:Int) => x * multi)
+  }
+
+  implicit val cageEqual = Equal.equal[Cage[Int]]((a, b) => a == b)
+
+  checkAll(ScalazProperties.apply.laws[Cage])
+}
+    </code></pre>
+
+  </section>
+
+  <section data-transition="slide">
+    <h3>Option Apply: OptionInstances</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+package scalaz
+package std
+
+override def ap[A, B](fa: => Option[A])(f: => Option[A => B]) = f match {
+  case Some(f) => fa match {
+    case Some(x) => Some(f(x))
+    case None    => None
+  }
+  case None    => None
+}
+    </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Shoot that Piranha Plant</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+import scalaz.std.option._
+
+val partialShoot = Option(PiranhaPlant()) <*> Option((shoot _).curried)
+val optCoin = Option(Fireball()) <*> partialShoot
+//optCoin: Option[Coin] = Some(Coin())
+    </code></pre>
+    <p class="That's a bit hard to follow">
+  </section>
+
+  <section data-transition="slide">
+    <h3>Some nicer syntax</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+import scalaz.std.option._
+import scalaz.syntax.apply._
+
+^(Option(PiranhaPlant()), Option(Fireball()))(shoot)
+//res69: Option[Coin] = Some(Coin())
+
+import scalaz.Apply
+Apply[Option]
+.lift2(shoot)(Option(PiranhaPlant()), Option(Fireball()))
+//res70: Option[Coin] = Some(Coin())
+
+(Option(PiranhaPlant()) |@| Option(Fireball()))(shoot)
+//res71: Option[Coin] = Some(Coin())
+    </code></pre>
+  </section>
+
+
+  <section data-transition="slide">
+    <h3></h3>
+  </section>
+
 </div>
