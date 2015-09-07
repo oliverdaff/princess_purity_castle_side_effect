@@ -119,7 +119,7 @@ objects</p>
         </section>
 
         <section data-transition="slide">
-          <h1>Why is a funciton like a pipe?</h1>
+          <h1>Why is a function like a pipe?</h1>
           <p class="fragment">Some thing goes into one end and something else comes out the other end</p>
         </section>
 
@@ -424,7 +424,7 @@ object DefaultProtoBuffWriters {
         <pre class="fragment" ><code class="scala" data-trim>
 object ProtoBuff {
   def toProtoBuff[A](value: A)
-  (implicity writer: ProtoBuffWriter[A]): Array[Byte] {
+  (implicit writer: ProtoBuffWriter[A]): Array[Byte] {
     writer.write(value)
   }
 }
@@ -455,6 +455,33 @@ import ProtBuffSyntax._
 val protoBuff: Array[Byte] = Coin().toProtoBuff
         </code></pre>
       </section>
+
+      <section data-transition="slide">
+        <h3>What about scalaz?</h3>
+        <p>Pimp existing types</p>
+        <p>Uses the Type classes in Ops classes</p>
+        <p>Ops classes use the Type class and provide more methods</p>
+        <pre class="fragment" ><code class="scala" data-trim>
+import sun.misc.BASE64Encoder //for example only
+class ProtoBuffWriterOps[A](val self: A)
+(implicit val F: ProtoBuffWriter[A]) {
+  def write(value: A) = F.write(value)
+  def writeBase64(value: A) =
+        new BASE64Encoder().encodeBuffer(write(value))
+}
+        </code></pre>
+        <pre class="fragment" ><code class="scala" data-trim>
+import scala.language.implicitConversions
+sealed trait ToProtoBuffWriterOps {
+  implicit def ToProtoBuffWriterOps[A](v: A)
+    (implicit F: ProtoBuffWriter[A]) = new ProtoBuffWriterOps(v)
+}
+
+object protoBuffWriter extends ToProtoBuffWriterOps
+
+        </code></pre>
+      </section>
+
 
       <section data-transition="slide">
         <h1>!!Warning!!</h1>
@@ -576,7 +603,8 @@ libraryDependencies ++= Seq(
       <section data-transition="slide">
         <h1>Context</h1>
         <p>Context is the environment the function is applied in.</p>
-        <p>Remember the comment Lift `f` into `F` and apply to `F[A]`</p>
+        <p>Remember the comment</p>
+        <blockquote>Lift `f` into `F` and apply to `F[A]`</blockquote>
 
       </section>
 
@@ -632,6 +660,33 @@ class ListFunctorSpec extends Spec {
         </p>
         <p class="fragment">Or no values if empty</p>
       </section>
+
+      <section data-transition="slide">
+        <h3>Disjunctions are Functors</h3>
+        <pre class="stretch" ><code class="scala" data-trim>
+import org.specs2.scalaz.Spec
+import scalaz.scalacheck.ScalazProperties
+
+class ListFunctorSpec extends Spec {
+  implicit val abrStringIntEither = Arbitrary[\/[String, Int]] {
+    for {
+      ns <- Arbitrary.arbInt.arbitrary
+    } yield \/-(ns)
+  }
+
+  implicit val disjuncEqual =
+    Equal.equal[\/[String, Int]]((a, b) => { (a,b) match {
+      case(-\/(l1), -\/(l2)) => l1 == l2
+      case(\/-(r1), \/-(r2)) => r1 == r2
+      case _ => false
+    }
+  })
+  //left type param is fixed
+  checkAll(ScalazProperties.functor.laws[({type λ[α] = \/[String, α]})#λ])
+}
+      </code></pre>
+      </section>
+
 
       <section data-transition="slide">
         <h1>So why is this so handy?</h1>
@@ -690,23 +745,28 @@ Cage(Goomba()).map(stomp)
 
   <section data-transition="slide">
     <h1>World 1-2</h1>
-    <p>Applicative</p>
+    <p>Apply</p>
   </section>
 
   <section data-transition="slide">
     <h2>Piranha Plant</h2>
-    <p>TODO:Add image</p>
-    <pre class="fragment" ><code class="scala" data-trim>
+    <img class="stretch" data-src="images/Piranha_Plant.png">
+  </section>
+
+  <section data-transition="slide">
+    <h2>Piranha Plant</h2>
+    <pre><code class="scala" data-trim>
 case class Coin()
 case class Goomba()
 case class Fireball()
 case class PiranhaPlant()
+
 def shoot(plant:PiranhaPlant, fireball:Fireball): Coin = Coin()
     </code></pre>
   </section>
 
   <section data-transition="slide">
-    <h3>The plant is generated from a unreliable method</h3>
+    <h3>The plant is generated from a unreliable source</h3>
     <p>Wrap the plant in a Option and map over it?</p>
 <pre class="fragment" ><code class="scala" data-trim>
 Option(PiranhaPlant()).map(shoot _)
@@ -785,7 +845,9 @@ trait ToApplyOps extends ToApplyOps0 with ToFunctorOps {
     <h3>What would our vacuum look like?</h3>
     <pre class="fragment" ><code class="scala" data-trim>
 implicit object CageApply extends Apply[Cage] with Functor[Cage] {
-  override def ap[A, B](fa: => Cage[A])(fab: => Cage[(A) => B]): Cage[B] =  fab match {
+  override def ap[A, B](fa: => Cage[A])
+  (fab: => Cage[(A) => B]): Cage[B] =  fab match {
+
     case FullCage(f) => fa match {
       case FullCage(x) => FullCage(f(x))
       case EmptyCage()    => EmptyCage[B]()
@@ -793,7 +855,8 @@ implicit object CageApply extends Apply[Cage] with Functor[Cage] {
     case EmptyCage()    => EmptyCage[B]()
   }
 
-  override def map[A, B](fa: Cage[A])(f: (A) => B): Cage[B] = CageFunctor.map(fa)(f)
+  override def map[A, B](fa: Cage[A])
+      (f: (A) => B): Cage[B] = CageFunctor.map(fa)(f)
 }
     </code></pre>
   </section>
@@ -817,7 +880,7 @@ import scalaz.Equal
 import scalaz.scalacheck.ScalazProperties
 
 class CageApplySpec extends Spec {
-  
+
   implicit val abrCage = Arbitrary[Cage[Int]] {
     for {
       ns <- Arbitrary.arbInt.arbitrary
@@ -844,13 +907,14 @@ class CageApplySpec extends Spec {
 package scalaz
 package std
 
-override def ap[A, B](fa: => Option[A])(f: => Option[A => B]) = f match {
-  case Some(f) => fa match {
-    case Some(x) => Some(f(x))
+override def ap[A, B](fa: => Option[A])
+  (f: => Option[A => B]) = f match {
+    case Some(f) => fa match {
+      case Some(x) => Some(f(x))
+      case None    => None
+    }
     case None    => None
   }
-  case None    => None
-}
     </code></pre>
   </section>
 
@@ -859,7 +923,8 @@ override def ap[A, B](fa: => Option[A])(f: => Option[A => B]) = f match {
     <pre class="fragment" ><code class="scala" data-trim>
 import scalaz.std.option._
 
-val partialShoot = Option(PiranhaPlant()) <*> Option((shoot _).curried)
+val partialShoot =
+  Option(PiranhaPlant()) <*> Option((shoot _).curried)
 val optCoin = Option(Fireball()) <*> partialShoot
 //optCoin: Option[Coin] = Some(Coin())
     </code></pre>
@@ -887,7 +952,163 @@ Apply[Option]
 
 
   <section data-transition="slide">
-    <h3></h3>
+    <h3>List as an aplicative</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+
+List(Goomba(), Goomba(), Goomba()) <*> List(stomp _)
+//res: List[Coin] = List(Coin(), Coin(), Coin())
+
+val partial = List(PiranhaPlant(), PiranhaPlant(),
+  PiranhaPlant()) <*> List((shoot _).curried)
+List(Fireball()) <*> partial
+//res23: List[Coin] = List(Coin(), Coin(), Coin())
+
+  </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Disjunction as an aplicative</h3>
+    <pre class="fragment" ><code class="scala" data-trim>
+    \/.right[String, Goomba](Goomba()) <*>
+      \/.right[String, Goomba => Coin]((_:Goomba) => Coin())
+  //res: scalaz.\/[String,Coin] = \/-(Coin())
+  </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Apply lets you take a function in a context and apply it to a value in a context</h3>
+    <p>Write the code once and reuse it in the context you need</p>
+  </section>
+
+  <section data-transition="zoom-in" data-background-size="contain" data-background="images/level_2_flag.png" >
+  </section>
+
+  <section data-transition="slide">
+    <h1>World 1-3</h1>
+    <p>Applicative</p>
+  </section>
+
+  <section data-transition="slide">
+    <h2>Koopa Paratroopa</h2>
+    <img class="stretch" data-src="images/KoopaPara.png">
+  </section>
+
+  <section data-transition="slide">
+    <h2>Has to be:</h2>
+    <ol>
+      <li>Koopa Paratroopa shot to a Koopa Troopa</li>
+      <li>Koopa Troopa is shot to a Shell</li>
+      <li>Shell is shot to a Coin</li>
+    </ol>
+  </section>
+
+
+  <section data-transition="zoom-in" data-background-size="contain" data-background="images/talk_is_cheap.jpg" >
+  </section>
+
+  <section data-transition="slide">
+    <h3>The code</h3>
+    <pre><code class="scala" data-trim>
+case class KoopaParatroopa()
+case class KoopaTroopa()
+case class Shell()
+case class Coin()
+case class Fireball()
+
+def shootKP(fb: Fireball, kt:KoopaParatroopa) = KoopaTroopa()
+def shootKT(fb: Fireball, kt:KoopaTroopa) = Shell()
+def shootS(fb: Fireball, kt:Shell) = Coin()
+
+  </code></pre>
+  <pre class="fragment"><code class="scala" data-trim>
+val cagedKoopa = ^(Cage(Fireball()),
+  Cage(KoopaParatroopa()))(shootKP)
+val cagedShell = ^(Cage(Fireball()), cagedKoopa)(shootKT)
+val cagedCoin = ^(Cage(Fireball()), cagedShell)(shootS)
+//cagedCoin: Cage[Coin] = FullCage(Coin())
+</code></pre>
+
+  </section>
+
+  <section data-transition="slide">
+    <h3>Applicative</h3>
+    <pre><code class="scala" data-trim>
+trait Applicative[F[_]] extends Apply[F] { self =>
+  ////
+  def point[A](a: => A): F[A]
+  ...
+}
+  </code></pre>
+  <pre class="fragment"><code class="scala" data-trim>
+implicit object CageApplicative extends Applicative[Cage] {
+  override def ap[A, B](fa: => Cage[A])(fab: => Cage[(A) => B]): Cage[B] =  fab match {
+    case FullCage(f) => fa match {
+      case FullCage(x) => FullCage(f(x))
+      case EmptyCage()    => EmptyCage[B]()
+    }
+    case EmptyCage()    => EmptyCage[B]()
+  }
+
+  override def point[A](a: => A): Cage[A] = Cage(a)
+}
+
+</code></pre>
+<p class="fragment">We no longer need to define map</p>
+  <pre class="fragment"><code class="scala" data-trim>
+override def map[A, B](fa: F[A])(f: A => B): F[B] =
+  ap(fa)(point(f))
+  </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Using applicative</h3>
+    <pre><code class="scala" data-trim>
+import scalaz.syntax.applicative._
+val cagedKoopa = ^(Fireball().point[Cage],
+KoopaParatroopa().point[Cage])(shootKP)
+val cagedShell = ^(Fireball().point[Cage], cagedKoopa)(shootKT)
+val cagedCoin = ^(Fireball().point[Cage], cagedShell)(shootS)
+
+//cagedCoin: Cage[Coin] = FullCage(Coin())
+  </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Same code different context</h3>
+    <pre><code class="scala" data-trim>
+val cagedKoopa = ^(Fireball().point[List],
+  KoopaParatroopa().point[List])(shootKP)
+val cagedShell = ^(Fireball().point[List], cagedKoopa)(shootKT)
+val cagedCoin = ^(Fireball().point[List], cagedShell)(shootS)
+
+//cagedCoin: Cage[Coin] = FullCage(Coin())
+  </code></pre>
+  </section>
+
+  <section data-transition="slide">
+    <h3>Remember</h3>
+    <ol>
+      <li>Abstraction: The Applicative</li>
+      <li>Generalisation: The Applicative trait</li>
+      <li>The context: Different behaviours for the same code</li>
+    </ol>
+  </section>
+
+  <section data-transition="zoom-in" data-background-size="contain" data-background="images/level_3_flag.jpg" >
+  </section>
+
+  <section data-transition="slide">
+    <h1>World 1-4</h1>
+    <p>Monad</p>
+  </section>
+
+  <section data-transition="slide">
+    <h2>Bowser</h2>
+    <img class="stretch" data-src="images/bowser.gif">
+  </section>
+
+
+  <section data-transition="zoom-in" data-background-size="contain" data-background="images/super_mario_bros_nes_end_screen.png" >
   </section>
 
 </div>
