@@ -1,6 +1,6 @@
 <div class="slides" id="slides">
         <section data-transition="slide">
-        <h1>Functors, Apply, Applicaive and Monads</h1>
+        <h1>Functors, Apply, Applicative and Monads</h1>
         </section>
 
         <section data-transition="slide">
@@ -159,7 +159,7 @@ class Vacuum {
 val vacuum = new Vacuum()
 val goomba = new Goomba()
 vacuum.collect(goomba)
-//FullCage(Coin())
+//Coin()
           </code></pre>
 
         </section>
@@ -211,7 +211,7 @@ object Cage {
             if (x == null) EmptyCage[T]() else FullCage(x)
 }
 </code></pre>
-<pre><code class="scala" data-trim>
+<pre class="fragment"><code class="scala" data-trim>
 class Vacuum {
   def collect(c:Cage[Goomba]):Cage[Coin] = c match {
     case EmptyCage() => EmptyCage[Coin]()
@@ -220,10 +220,11 @@ class Vacuum {
 }
            </code></pre>
 
-          <pre><code class="scala" data-trim>
+          <pre class="fragment"><code class="scala" data-trim>
 val vac = new Vacuum()
 
 vac.collect(Cage(Goomba()))
+//FullCage[Coin](Coin())
 
 vac.collect(Cage(null))
 //EmptyCage[Coin]()
@@ -442,16 +443,7 @@ val protoBuff: Array[Byte] = Coin().toProtoBuff
         <p>Pimp existing types</p>
         <p>Uses the Type classes in Ops classes</p>
         <p>Ops classes use the Type class and provide more methods</p>
-        <pre><code class="scala" data-trim>
-import sun.misc.BASE64Encoder //for example only
-class ProtoBuffWriterOps[A](val self: A)
-(implicit val F: ProtoBuffWriter[A]) {
-  def write(value: A) = F.write(value)
-  def writeBase64(value: A) =
-        new BASE64Encoder().encodeBuffer(write(value))
-}
-        </code></pre>
-        <pre  ><code class="scala" data-trim>
+        <pre ><code class="scala" data-trim>
 import scala.language.implicitConversions
 sealed trait ToProtoBuffWriterOps {
   implicit def ToProtoBuffWriterOps[A](v: A)
@@ -460,6 +452,15 @@ sealed trait ToProtoBuffWriterOps {
 
 object protoBuffWriter extends ToProtoBuffWriterOps
 
+        </code></pre>
+        <pre class="fragment"> <code class="scala" data-trim>
+import sun.misc.BASE64Encoder //for example only
+class ProtoBuffWriterOps[A](val self: A)
+(implicit val F: ProtoBuffWriter[A]) {
+  def write(value: A) = F.write(value)
+  def writeBase64(value: A) =
+        new BASE64Encoder().encodeBuffer(write(value))
+}
         </code></pre>
       </section>
 
@@ -510,7 +511,7 @@ import scalaz.syntax.functor
       </section>
 
       <section data-transition="slide">
-        <p>ToFunctorOps: Implicity converts a Functor to Functor Ops</p>
+        <p>ToFunctorOps: Implicity converts a Functor to FunctorOps</p>
         <p>FunctorOps: Uses the implicit Functor in scope add the map method to the Type</p>
 
       </section>
@@ -540,7 +541,9 @@ Cage(Goomba()).map(stomp)
       <section data-transition="slide">
         <h1>The Functor Laws</h1>
         <p>Mapping preserves identity</p>
+        <blockquote>If we map the id function over a functor, the functor that we get back should be the same as the original functor</blockquote>
         <p>Mapping respects composition</p>
+        <blockquote>Composing two functions and then mapping the resulting function over a functor should be the same as first mapping one function over the functor and then mapping the other one</blockquote>
       </section>
 
 
@@ -578,8 +581,8 @@ libraryDependencies ++= Seq(
       <section data-transition="slide">
         <h2>Remember the three points?</h2>
         <ul>
-        <li class="fragment">Abstraction: Functor is a abstract concept</li>
-        <li class="fragment">Generalization: There is a set of objects that can be mapped over</li>
+        <li >Abstraction: Functor is a abstract concept</li>
+        <li >Generalization: There is a set of objects that can be mapped over</li>
       </ul>
       <p class="fragment">What about the context?</p>
       </section>
@@ -637,7 +640,7 @@ class ListFunctorSpec extends Spec {
   checkAll(ScalazProperties.functor.laws[List])
 }
 </code></pre>
-        <p>If 6 is deterministic and is thought as having one value.<br>
+        <p>If 6 is deterministic and having one value.<br>
           The List context such as List(1,10,3,4) can be thought of as having multipule values at once.
         </p>
         <p>Or no values if empty</p>
@@ -687,7 +690,7 @@ class ListFunctorSpec extends Spec {
       <section data-transition="slide">
         <h2>Functions in a context have useful properties</h2>
         <p>Functors let us write ordinary functions</p>
-        <p>then promote those functions into what every context might need that code</p>
+        <p>Then promote those functions into what every context might need that code</p>
         <p>As new contexts arise we just define new functors to promote our ordinary code to work in those contexts.</p>
       </section>
 
@@ -727,7 +730,7 @@ Cage(Goomba()).map(stomp)
 
   <section data-transition="slide">
     <h1>World 1-2</h1>
-    <p>Apply</p>
+    <p>Apply Land</p>
   </section>
 
   <section data-transition="slide">
@@ -748,15 +751,15 @@ def shoot(plant:PiranhaPlant, fireball:Fireball): Coin = Coin()
 
   <section data-transition="slide">
     <h3>The plant is generated from a unreliable source</h3>
-    <p>Wrap the plant in a Option and map over it?</p>
+    <p>Wrap the plant in a Cage and map over it?</p>
 <pre ><code class="scala" data-trim>
-Option(PiranhaPlant()).map(shoot _)
+Cage(PiranhaPlant()).map(shoot _)
     </code></pre>
     <pre  class="fragment"><code class="scala" data-trim>
       <console>:31: error: type mismatch;
 found   : (PiranhaPlant, Fireball) => Coin
 required: PiranhaPlant => ?
-            Option(PiranhaPlant()).map(shoot _)
+            Cage(PiranhaPlant()).map(shoot _)
         </code></pre>
   </section>
 
@@ -777,8 +780,8 @@ required: PiranhaPlant => ?
   <section data-transition="slide">
     <h3>Map the curried shoot function</h3>
     <pre ><code class="scala" data-trim>
-Option(PiranhaPlant()) map {shoot _}.curried
-//Option[Fireball => Coin] = ...
+Cage(PiranhaPlant()) map {shoot _}.curried
+//Cage[Fireball => Coin] = ...
     </code></pre>
   </section>
 
@@ -846,10 +849,17 @@ implicit object CageApply extends Apply[Cage] with Functor[Cage] {
     <h3>How would you use it?</h3>
     <pre ><code class="scala" data-trim>
 val partialShoot = Cage(PiranhaPlant()) <*> Cage((shoot _).curried)
+
 val optCoin = Cage(Fireball()) <*> partialShoot
 //optCoin: Cage[Coin] = FullCage(Coin())
     </code></pre>
 
+  </section>
+
+  <section data-transition="slide">
+    <h3>What have we done?</h3>
+    <p>Taken a function that takes two values.</p>
+    <p>Turned it into a function that takes two values in a context.</p>
   </section>
 
   <section data-transition="slide">
@@ -926,19 +936,13 @@ Apply[Option]
 .lift2(shoot)(Option(PiranhaPlant()), Option(Fireball()))
 //res70: Option[Coin] = Some(Coin())
 
-(Option(PiranhaPlant()) |@| Option(Fireball()))(shoot)
-//res71: Option[Coin] = Some(Coin())
     </code></pre>
   </section>
 
 
   <section data-transition="slide">
-    <h3>List as an Apply</h3>
+    <h3>List as an Apply Context</h3>
     <pre ><code class="scala" data-trim>
-
-List(Goomba(), Goomba(), Goomba()) <*> List(stomp _)
-//res: List[Coin] = List(Coin(), Coin(), Coin())
-
 val partial = List(PiranhaPlant(), PiranhaPlant(),
   PiranhaPlant()) <*> List((shoot _).curried)
 List(Fireball()) <*> partial
@@ -959,6 +963,15 @@ List(Fireball()) <*> partial
   <section data-transition="slide">
     <p>Apply lets you take a function that takes values and turn it into a function that takes values in a context.</p>
     <p>Write the code once and reuse it in the context you need</p>
+  </section>
+
+  <section data-transition="slide">
+    <h2>Remember the three points?</h2>
+    <ul>
+    <li >Abstraction: Apply is a abstract concept</li>
+    <li >Generalization: There is a set of objects that implement the Apply trait</li>
+    <li >Context: How the funciton is used depends on the Apply Specialization we are using</li>
+  </ul>
   </section>
 
   <section data-transition="zoom-in" data-background-size="contain" data-background="images/level_2_flag.png" >
