@@ -325,7 +325,7 @@ trait Functor[F[_]] extends InvariantFunctor[F] { self =>
 object CageFunctor extends Functor[Cage] {
 
   def map[A,B](c:Cage[A])(f:A => B):Cage[B] = c match {
-    case EmptyCage => EmptyCage
+    case EmptyCage() => EmptyCage[B]()
     case FullCage(s) => FullCage(f(s))
   }
 
@@ -511,12 +511,6 @@ import scalaz.syntax.functor
       </section>
 
       <section data-transition="slide">
-        <p>ToFunctorOps: Implicity converts a Functor to FunctorOps</p>
-        <p>FunctorOps: Uses the implicit Functor in scope add the map method to the Type</p>
-
-      </section>
-
-      <section data-transition="slide">
         <h2>Cage Functor again</h2>
         <p>scalaz.syntax.FunctorSyntax.scala</p>
       <pre ><code class="scala" data-trim>
@@ -524,7 +518,7 @@ import scalaz.Functor
 implicit object CageFunctor extends Functor[Cage] {
 
   def map[A,B](c:Cage[A])(f:A => B):Cage[B] = c match {
-    case EmptyCage => EmptyCage
+    case EmptyCage() => EmptyCage[B]()
     case FullCage(s) => FullCage(f(s))
   }
 }
@@ -602,7 +596,7 @@ libraryDependencies ++= Seq(
       </section>
 
       <section data-transition="slide">
-        <h3>Cage is really scala.Option</h3>
+        <h3>scala.Option</h3>
         <pre ><code class="scala" data-trim>
 sealed abstract class Option[+A] extends Product with Serializable {
 ...
@@ -690,7 +684,7 @@ class ListFunctorSpec extends Spec {
       <section data-transition="slide">
         <h2>Functions in a context have useful properties</h2>
         <p>Functors let us write ordinary functions</p>
-        <p>Then promote those functions into what every context might need that code</p>
+        <p>Then promote those functions into every context that might need that code</p>
         <p>As new contexts arise we just define new functors to promote our ordinary code to work in those contexts.</p>
       </section>
 
@@ -828,7 +822,7 @@ trait ToApplyOps extends ToApplyOps0 with ToFunctorOps {
   <section data-transition="slide">
     <h3>What would our vacuum look like?</h3>
     <pre ><code class="scala" data-trim>
-implicit object CageApply extends Apply[Cage] with Functor[Cage] {
+implicit object CageApply extends Apply[Cage]{
   override def ap[A, B](fa: => Cage[A])
   (fab: => Cage[(A) => B]): Cage[B] =  fab match {
 
@@ -852,7 +846,13 @@ val partialShoot = Cage(PiranhaPlant()) <*> Cage((shoot _).curried)
 
 val optCoin = Cage(Fireball()) <*> partialShoot
 //optCoin: Cage[Coin] = FullCage(Coin())
+
+
+val optCoin = EmptyCage[Fireball]() <*> partialShoot
+//optCoin: Cage[Coin] = EmptyCage[Coin]()
     </code></pre>
+
+
 
   </section>
 
@@ -994,6 +994,7 @@ List(Fireball()) <*> partial
       <li>Koopa Troopa is shot to a Shell</li>
       <li>Shell is shot to a Coin</li>
     </ol>
+    <img data-src="images/koopa.png">
   </section>
 
 
@@ -1060,7 +1061,7 @@ override def map[A, B](fa: F[A])(f: A => B): F[B] =
     <pre><code class="scala" data-trim>
 import scalaz.syntax.applicative._
 val cagedKoopa = ^(Fireball().point[Cage],
-KoopaParatroopa().point[Cage])(shootKP)
+    KoopaParatroopa().point[Cage])(shootKP)
 val cagedShell = ^(Fireball().point[Cage], cagedKoopa)(shootKT)
 val cagedCoin = ^(Fireball().point[Cage], cagedShell)(shootS)
 
@@ -1107,6 +1108,7 @@ val cagedCoin = ^(Fireball().point[List], cagedShell)(shootS)
     <p>Mario can hit Bowser</p>
     <p>Bowser can hit Mario</p>
     <p>Mario dies if at any point hits on Mario > hits on Bowser + 2</p>
+    <img class="stretch" data-src="images/mario_v_bow1.png">
   </section>
 
   <section data-transition="slide">
@@ -1145,7 +1147,7 @@ marioWins(Hits(3,0))
   </section>
 
   <section data-transition="slide">
-    <h3>Failing the compuation?</h3>
+    <h3>Failing the computation?</h3>
 <pre><code class="scala" data-trim>
 Hits => Cage[Hits]
 </code></pre>
@@ -1243,6 +1245,12 @@ Cage(Hits(0,2)) >>=  hitMario2 >>= hitMario2 >>=
 //Cage[Hits] = FullCage(Hits(3,5))
     </code></pre>
 
+  <img data-src="images/mario_v_bow2.png">
+  </section>
+
+  <section data-transition="slide">
+    <h2>For comprehension flat map</h2>
+
     <pre class="fragment"><code class="scala" data-trim>
 val x  = for {
   r1 <- Cage(Hits(0,0))
@@ -1267,6 +1275,9 @@ def addTwo(x:Int) = List(x + 2)
 List(1,2,3) >>= addTwo
 //List[Int] = List(3, 4, 5)
     </code></pre>
+    <p>Reader Monad</p>
+    <p>Writer Monad</p>
+    <p>State Monad</p>
   </section>
 
   <section data-transition="slide">
@@ -1307,6 +1318,12 @@ Cage(Hits(1,2)) >>= hitBowser3[Cage]
   </section>
 
   <section data-transition="slide">
+    <h3>Monad</h3>
+    <p>Lets us call a function that takes a value and returns a value
+      in a context with a value in a context.</p>
+  </section>
+
+  <section data-transition="slide">
     <h3>Remember</h3>
     <ol>
       <li>Abstraction: The Monad</li>
@@ -1338,6 +1355,12 @@ Cage(Hits(1,2)) >>= hitBowser3[Cage]
 
   <section data-transition="slide">
     <h1>References</h1>
+    <ul>
+      <li>Learn you a Haskell for Greater Good <a href="http://learnyouahaskell.com/">http://learnyouahaskell.com/</a></li>
+      <li>Leaning Scalaz <a href="http://eed3si9n.com/learning-scalaz/">http://eed3si9n.com/learning-scalaz/</a></li>
+      <li>Functional Programming in Scala <a href="https://www.manning.com/books/functional-programming-in-scala">https://www.manning.com/books/functional-programming-in-scala</a></li>
+      <li>Bartosz Blog <a href="http://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/">http://bartoszmilewski.com/2014/10/28/category-theory-for-programmers-the-preface/</a></li>
+    </ul>
   </section>
 
   <section data-transition="zoom-in" data-background-size="contain" data-background="images/super_mario_bros_nes_end_screen.png" >
